@@ -1,0 +1,97 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Loader2, Trash2, ShoppingCart, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { removeFromCart, clearCart, addToCart } from "@/lib/actions/cart";
+import { startCheckout } from "@/lib/actions/checkout";
+
+export function RemoveItemButton({ slug }: { slug: string }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return (
+    <button
+      aria-label="Remover item"
+      disabled={pending}
+      onClick={() =>
+        start(async () => {
+          await removeFromCart(slug);
+          router.refresh();
+        })
+      }
+      className="text-muted hover:text-danger disabled:opacity-50"
+    >
+      {pending ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Trash2 className="h-4 w-4" />
+      )}
+    </button>
+  );
+}
+
+export function AddUpsellButton({ slug }: { slug: string }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return (
+    <Button
+      variant="outline"
+      disabled={pending}
+      onClick={() =>
+        start(async () => {
+          await addToCart(slug);
+          router.refresh();
+        })
+      }
+    >
+      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+      Adicionar oferta
+    </Button>
+  );
+}
+
+export function CheckoutButtons() {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function buy() {
+    setError(null);
+    start(async () => {
+      const res = await startCheckout();
+      if (res.ok) {
+        // Redireciona para o checkout externo do Mercado Pago.
+        window.location.href = res.initPoint;
+      } else {
+        setError(res.error);
+      }
+    });
+  }
+
+  function cancel() {
+    start(async () => {
+      await clearCart();
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="space-y-3">
+      {error && <p className="text-sm text-danger">{error}</p>}
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Button className="flex-1" onClick={buy} disabled={pending}>
+          {pending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <ShoppingCart className="h-4 w-4" />
+          )}
+          Comprar
+        </Button>
+        <Button variant="outline" onClick={cancel} disabled={pending}>
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  );
+}

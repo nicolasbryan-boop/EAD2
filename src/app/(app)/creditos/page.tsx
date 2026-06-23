@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { SelectPackageButton } from "@/components/credits/select-package-button";
 import { CREDIT_PACKAGES, formatBRL } from "@/lib/constants";
 import { Coins } from "lucide-react";
 
@@ -25,10 +25,8 @@ export default function CreditosPage() {
               <span className="text-sm font-normal text-muted">créditos</span>
             </p>
             <p className="mt-1 text-sm text-muted">{formatBRL(pkg.priceCents)}</p>
-            {/* O fluxo carrinho → checkout externo chega na Fase 5. */}
-            <Button className="mt-4" disabled>
-              Selecionar
-            </Button>
+            <div className="flex-1" />
+            <SelectPackageButton slug={pkg.slug} />
           </Card>
         ))}
       </div>
