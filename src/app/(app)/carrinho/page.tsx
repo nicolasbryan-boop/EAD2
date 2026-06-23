@@ -10,7 +10,7 @@ import {
 } from "@/components/cart/cart-actions";
 import { getCart } from "@/lib/cart";
 import { createClient } from "@/lib/supabase/server";
-import { formatBRL } from "@/lib/constants";
+import { formatBRL, UPSELL_REQUIRES_MAIN_MESSAGE } from "@/lib/constants";
 
 export const metadata = { title: "Carrinho — Trilogia do Sucesso" };
 
@@ -58,7 +58,18 @@ export default async function CarrinhoPage() {
               <Coins className="h-5 w-5" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium">{item.name}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium">{item.name}</p>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] ${
+                    item.isUpsell
+                      ? "bg-primary/15 text-primary"
+                      : "bg-accent/15 text-accent"
+                  }`}
+                >
+                  {item.isUpsell ? "Oferta especial" : "Pacote principal"}
+                </span>
+              </div>
               <p className="text-xs text-muted">
                 {item.credits.toLocaleString("pt-BR")} créditos × {item.quantity}
               </p>
@@ -71,8 +82,17 @@ export default async function CarrinhoPage() {
         ))}
       </Card>
 
-      {/* Upsell */}
-      {upsell && !hasUpsell && (
+      {/* Aviso quando o carrinho ficou só com a oferta especial. */}
+      {cart.onlyUpsell && (
+        <Card className="border-danger/40">
+          <CardDescription className="text-danger">
+            {UPSELL_REQUIRES_MAIN_MESSAGE}
+          </CardDescription>
+        </Card>
+      )}
+
+      {/* Upsell — só aparece se houver um pacote principal no carrinho. */}
+      {upsell && !hasUpsell && cart.hasMainPackage && (
         <Card className="flex flex-col gap-3 border-primary/40 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
@@ -102,7 +122,9 @@ export default async function CarrinhoPage() {
           <span className="font-semibold">Total</span>
           <span className="font-semibold">{formatBRL(cart.totalCents)}</span>
         </div>
-        <CheckoutButtons />
+        <CheckoutButtons
+          blockedReason={cart.onlyUpsell ? UPSELL_REQUIRES_MAIN_MESSAGE : undefined}
+        />
         <p className="text-center text-xs text-muted">
           Os créditos são adicionados à sua conta após a confirmação do
           pagamento.

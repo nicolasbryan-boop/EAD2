@@ -51,12 +51,21 @@ export function AddUpsellButton({ slug }: { slug: string }) {
   );
 }
 
-export function CheckoutButtons() {
+export function CheckoutButtons({
+  blockedReason,
+}: {
+  /** Quando preenchido, a compra fica bloqueada com esta mensagem. */
+  blockedReason?: string;
+}) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   function buy() {
+    if (blockedReason) {
+      setError(blockedReason);
+      return;
+    }
     setError(null);
     start(async () => {
       const res = await startCheckout();
@@ -78,9 +87,15 @@ export function CheckoutButtons() {
 
   return (
     <div className="space-y-3">
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {(error || blockedReason) && (
+        <p className="text-sm text-danger">{error ?? blockedReason}</p>
+      )}
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Button className="flex-1" onClick={buy} disabled={pending}>
+        <Button
+          className="flex-1"
+          onClick={buy}
+          disabled={pending || !!blockedReason}
+        >
           {pending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (

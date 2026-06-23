@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { isUpsellSlug } from "@/lib/constants";
 
 export type CartItem = {
   slug: string;
@@ -6,12 +7,17 @@ export type CartItem = {
   credits: number;
   priceCents: number;
   quantity: number;
+  isUpsell: boolean;
 };
 
 export type Cart = {
   items: CartItem[];
   totalCents: number;
   totalCredits: number;
+  /** Tem ao menos um pacote principal (não-upsell)? */
+  hasMainPackage: boolean;
+  /** Carrinho contém apenas itens de upsell (estado inválido p/ compra). */
+  onlyUpsell: boolean;
 };
 
 /** Carrega o carrinho do usuário logado com os detalhes dos pacotes. */
@@ -20,7 +26,14 @@ export async function getCart(): Promise<Cart> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { items: [], totalCents: 0, totalCredits: 0 };
+  const empty: Cart = {
+    items: [],
+    totalCents: 0,
+    totalCredits: 0,
+    hasMainPackage: false,
+    onlyUpsell: false,
+  };
+  if (!user) return empty;
 
   const { data: cart } = await supabase
     .from("carts")
@@ -28,7 +41,7 @@ export async function getCart(): Promise<Cart> {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!cart) return { items: [], totalCents: 0, totalCredits: 0 };
+  if (!cart) return empty;
 
   const { data: rows } = await supabase
     .from("cart_items")
@@ -47,6 +60,7 @@ export async function getCart(): Promise<Cart> {
       credits: pkg.credits,
       priceCents: pkg.price_cents,
       quantity: r.quantity,
+      isUpsell: isUpsellSlug(r.package_slug),
     };
   });
 
@@ -55,6 +69,8 @@ export async function getCart(): Promise<Cart> {
     0
   );
   const totalCredits = items.reduce((s, i) => s + i.credits * i.quantity, 0);
+  const hasMainPackage = items.some((i) => !i.isUpsell);
+  const onlyUpsell = items.length > 0 && !hasMainPackage;
 
-  return { items, totalCents, totalCredits };
+  return { items, totalCents, totalCredits, hasMainPackage, onlyUpsell };
 }

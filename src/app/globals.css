@@ -59,6 +59,59 @@ body {
   border-radius: 8px;
 }
 
+/* ===========================================================================
+   Mascotes-robô (cards de IA)
+   - Flutuar é leve e contínuo (ok no mobile).
+   - Aceno/tremor/scan mais fortes só "esquentam" no hover do desktop.
+   =========================================================================== */
+.robot-glow {
+  filter: drop-shadow(0 0 3px currentColor);
+}
+@keyframes robotFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+@keyframes robotWave {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-22deg); }
+}
+@keyframes robotShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-1.5px); }
+  75% { transform: translateX(1.5px); }
+}
+@keyframes robotScan {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+@keyframes robotSpin {
+  to { transform: rotate(360deg); }
+}
+.robot-float {
+  animation: robotFloat 4s ease-in-out infinite;
+  transform-origin: center;
+}
+.robot-arm {
+  transform-origin: 24px 80px;
+}
+.robot-eye {
+  animation: robotScan 2.6s ease-in-out infinite;
+}
+.robot-ring {
+  transform-origin: 60px 130px;
+  animation: robotSpin 9s linear infinite;
+}
+/* Hover no desktop: animação mais forte de cada robô. */
+.group:hover .robot-arm {
+  animation: robotWave 0.7s ease-in-out infinite;
+}
+.group:hover .robot-shake {
+  animation: robotFloat 4s ease-in-out infinite, robotShake 0.28s linear infinite;
+}
+.group:hover .robot-ring {
+  animation: robotSpin 3.5s linear infinite;
+}
+
 /* Respeita usuários que pedem menos animação (acessibilidade) */
 @media (prefers-reduced-motion: reduce) {
   * {

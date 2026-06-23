@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCart } from "@/lib/cart";
 import { createPreference } from "@/lib/gateways/mercadopago";
+import { UPSELL_REQUIRES_MAIN_MESSAGE } from "@/lib/constants";
 
 /**
  * Finaliza o carrinho: cria um pedido `pending` e uma preferência de
@@ -21,6 +22,11 @@ export async function startCheckout(): Promise<
   const cart = await getCart();
   if (cart.items.length === 0)
     return { ok: false, error: "Seu carrinho está vazio." };
+
+  // Validação de segurança (back-end): nunca permitir comprar só upsell.
+  if (cart.onlyUpsell) {
+    return { ok: false, error: UPSELL_REQUIRES_MAIN_MESSAGE };
+  }
 
   // 1. Cria o pedido (pending) com snapshot dos itens.
   const { data: order, error } = await supabase

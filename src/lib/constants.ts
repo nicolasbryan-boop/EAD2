@@ -24,12 +24,13 @@ export type NavItem = {
 
 /** Menu lateral (desktop) e drawer/inferior (mobile). */
 export const NAV_ITEMS: NavItem[] = [
+  // "Sua conta" propositalmente acima de "Início".
+  { label: "Sua conta", href: "/conta", icon: User },
   { label: "Início", href: "/inicio", icon: Home },
   { label: "Aulas", href: "/aulas", icon: PlayCircle },
   { label: "IA 1", href: "/ia/ia-1", icon: Bot },
   { label: "IA 2", href: "/ia/ia-2", icon: Bot, locked: true, badge: "Em breve" },
   { label: "IA 3", href: "/ia/ia-3", icon: Bot, locked: true, badge: "Em breve" },
-  { label: "Sua conta", href: "/conta", icon: User },
   { label: "Suporte", href: "/suporte", icon: LifeBuoy },
   { label: "Comprar créditos", href: "/creditos", icon: CreditCard },
 ];
@@ -94,6 +95,26 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
   { slug: "pacote-3000", name: "Pacote Plus", credits: 3000, priceCents: 6990 },
   { slug: "pacote-10000", name: "Pacote Pro", credits: 10000, priceCents: 19990 },
 ];
+
+/**
+ * Regras do carrinho:
+ *  - Pacotes "principais" podem ser comprados sozinhos.
+ *  - Itens de UPSELL (oferta especial) SÓ existem se houver um pacote
+ *    principal no carrinho. Nunca podem ser comprados isolados.
+ */
+export const UPSELL_SLUGS = ["upsell-1000"] as const;
+
+export const UPSELL_REQUIRES_MAIN_MESSAGE =
+  "Essa oferta especial só está disponível junto com um pacote principal de créditos.";
+
+export function isUpsellSlug(slug: string): boolean {
+  return (UPSELL_SLUGS as readonly string[]).includes(slug);
+}
+
+/** Um slug é "principal" quando NÃO é upsell. */
+export function isMainPackageSlug(slug: string): boolean {
+  return !isUpsellSlug(slug);
+}
 
 /** Custo em créditos por tipo de mensagem da IA (usado na Fase 4). */
 export const AI_CREDIT_COST = {

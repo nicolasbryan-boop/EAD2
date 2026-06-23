@@ -2,6 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import {
+  isUpsellSlug,
+  isMainPackageSlug,
+  UPSELL_REQUIRES_MAIN_MESSAGE,
+} from "@/lib/constants";
 
 /** Garante que o usuário tem um carrinho e retorna o id. */
 async function ensureCart(): Promise<{ supabase: Awaited<ReturnType<typeof createClient>>; userId: string; cartId: string } | null> {
@@ -42,6 +47,20 @@ export async function addToCart(packageSlug: string) {
     .maybeSingle();
   if (!pkg) return { ok: false, error: "Pacote inválido." };
 
+  // Regra: upsell só pode entrar se já houver um pacote principal no carrinho.
+  if (isUpsellSlug(packageSlug)) {
+    const { data: existing } = await ctx.supabase
+      .from("cart_items")
+      .select("package_slug")
+      .eq("cart_id", ctx.cartId);
+    const hasMain = (existing ?? []).some((i) =>
+      isMainPackageSlug(i.package_slug)
+    );
+    if (!hasMain) {
+      return { ok: false, error: UPSELL_REQUIRES_MAIN_MESSAGE };
+    }
+  }
+
   const { data: item } = await ctx.supabase
     .from("cart_items")
     .select("id, quantity")
@@ -74,6 +93,30 @@ export async function removeFromCart(packageSlug: string) {
     .delete()
     .eq("cart_id", ctx.cartId)
     .eq("package_slug", packageSlug);
+
+  // Se removeu um pacote principal e não sobrou nenhum, remove os upsells
+  // (a oferta especial não pode ficar sozinha no carrinho).
+  if (isMainPackageSlug(packageSlug)) {
+    const { data: remaining } = await ctx.supabase
+      .from("cart_items")
+      .select("package_slug")
+      .eq("cart_id", ctx.cartId);
+    const hasMain = (remaining ?? []).some((i) =>
+      isMainPackageSlug(i.package_slug)
+    );
+    if (!hasMain) {
+      const upsellSlugs = (remaining ?? [])
+        .map((i) => i.package_slug)
+        .filter((s) => isUpsellSlug(s));
+      if (upsellSlugs.length > 0) {
+        await ctx.supabase
+          .from("cart_items")
+          .delete()
+          .eq("cart_id", ctx.cartId)
+          .in("package_slug", upsellSlugs);
+      }
+    }
+  }
 
   revalidatePath("/carrinho");
   return { ok: true };
