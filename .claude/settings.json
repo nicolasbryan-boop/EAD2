@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm -v)",
+      "Bash(git --version)",
+      "Bash(gh --version)",
+      "Bash(npx --yes create-next-app@latest . --ts --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-turbopack --use-npm)",
+      "Bash(npx --yes create-next-app@latest _scaffold --ts --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-turbopack --use-npm --skip-install)",
+      "Bash(npx --yes create-next-app@latest scaffold-tmp --ts --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-turbopack --use-npm --skip-install)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}
