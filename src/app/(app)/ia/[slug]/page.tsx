@@ -1,17 +1,25 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { Lock, Bot } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ChatUI } from "@/components/ia/chat-ui";
 import { AI_AGENTS } from "@/lib/constants";
+import { getAccountData } from "@/lib/account";
+import {
+  listConversations,
+  getConversationMessages,
+} from "@/lib/ai/conversations";
 
 export default async function IaPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ c?: string }>;
 }) {
   const { slug } = await params;
+  const { c: conversationId } = await searchParams;
+
   const agent = AI_AGENTS.find((a) => a.slug === slug);
   if (!agent) notFound();
 
@@ -34,10 +42,18 @@ export default async function IaPage({
     );
   }
 
-  // IA 1: liberada — placeholder do chat (interface completa na Fase 4).
+  // IA 1: liberada → chat completo.
+  const [account, conversations, messages] = await Promise.all([
+    getAccountData(),
+    listConversations(slug),
+    conversationId
+      ? getConversationMessages(conversationId)
+      : Promise.resolve([]),
+  ]);
+
   return (
     <div>
-      <div className="mb-8 flex items-center gap-3">
+      <div className="mb-6 flex items-center gap-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent text-white">
           <Bot className="h-5 w-5" />
         </div>
@@ -47,18 +63,16 @@ export default async function IaPage({
         </div>
       </div>
 
-      <Card>
-        <CardTitle>Chat em construção (Fase 4)</CardTitle>
-        <CardDescription>
-          Aqui virá a interface estilo ChatGPT: histórico, envio de mensagens,
-          upload de imagem/arquivo e consumo de créditos.
-        </CardDescription>
-        <div className="mt-4">
-          <Link href="/creditos">
-            <Button variant="outline">Comprar créditos</Button>
-          </Link>
-        </div>
-      </Card>
+      <ChatUI
+        agentSlug={slug}
+        initialBalance={account?.credits ?? 0}
+        conversations={conversations.map((c) => ({ id: c.id, title: c.title }))}
+        activeConversationId={conversationId ?? null}
+        initialMessages={messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }))}
+      />
     </div>
   );
 }
