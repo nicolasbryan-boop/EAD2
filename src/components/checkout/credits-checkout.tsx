@@ -157,10 +157,28 @@ function BrickCheckout({
   }
 
   return (
-    <Card>
+    <Card className="border-[#34d399]/40 bg-surface shadow-[0_0_30px_-10px_#34d399]">
       <Brick
         initialization={{ amount: Number((amountCents / 100).toFixed(2)) }}
         customization={{
+          // Tema escuro + cores da Trilogia (verde neon nos destaques).
+          visual: {
+            style: {
+              theme: "dark",
+              customVariables: {
+                baseColor: "#34d399",
+                baseColorFirstVariant: "#22d3ee",
+                formBackgroundColor: "#0f0f17",
+                inputBackgroundColor: "#16161f",
+                textPrimaryColor: "#ededf2",
+                textSecondaryColor: "#8a8a99",
+                outlinePrimaryColor: "#34d399",
+                buttonTextColor: "#04130d",
+                borderRadiusMedium: "12px",
+                borderRadiusLarge: "16px",
+              },
+            },
+          },
           paymentMethods: {
             creditCard: "all",
             debitCard: "all",
