@@ -16,6 +16,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Robot } from "@/components/ia/robot";
 import { AI_CREDIT_COST } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -24,12 +25,16 @@ type Conversation = { id: string; title: string };
 
 export function ChatUI({
   agentSlug,
+  agentName,
+  agentDescription,
   initialBalance,
   conversations,
   activeConversationId,
   initialMessages,
 }: {
   agentSlug: string;
+  agentName: string;
+  agentDescription: string;
   initialBalance: number;
   conversations: Conversation[];
   activeConversationId: string | null;
@@ -153,7 +158,58 @@ export function ChatUI({
   }
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] gap-4">
+    <div className="space-y-5">
+      {/* ===== HERO: robô inteiro da IA 1 + título/descrição + créditos ===== */}
+      <div className="group relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-surface to-surface-2 p-5 sm:p-6">
+        {/* glow verde sutil no hover */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-700 group-hover:opacity-100"
+          style={{
+            background:
+              "radial-gradient(220px 220px at 12% 50%, rgba(52,211,153,0.18), transparent 70%)",
+          }}
+        />
+        <div className="relative flex flex-col items-center gap-5 text-center sm:flex-row sm:items-center sm:text-left">
+          {/* Robô inteiro (mesmo componente da Início) */}
+          <div className="robot-zoom shrink-0">
+            <Robot
+              variant={1}
+              accent="#34d399"
+              className="h-28 w-28 sm:h-36 sm:w-36"
+            />
+          </div>
+
+          {/* Texto + créditos */}
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold tracking-tight">{agentName}</h1>
+            <p className="mt-1 max-w-xl text-sm text-muted">
+              {agentDescription}
+            </p>
+
+            <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:items-center">
+              <div className="inline-flex items-center gap-3 rounded-2xl border border-accent/30 bg-accent/10 px-4 py-2 shadow-[0_0_24px_-8px_var(--accent)]">
+                <Zap className="h-6 w-6 text-accent" />
+                <div className="leading-none text-left">
+                  <div className="text-2xl font-bold tracking-tight text-accent">
+                    {balance.toLocaleString("pt-BR")}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-muted">
+                    créditos disponíveis
+                  </div>
+                </div>
+              </div>
+              <Link href="/creditos">
+                <Button size="sm" variant="outline">
+                  Comprar créditos
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Histórico + Chat ===== */}
+      <div className="flex h-[calc(100vh-22rem)] min-h-[420px] gap-4">
       {/* Lista de conversas */}
       <aside className="hidden w-60 shrink-0 flex-col rounded-2xl border border-border bg-surface/60 p-3 md:flex">
         <Link href={`/ia/${agentSlug}`}>
@@ -187,26 +243,6 @@ export function ChatUI({
 
       {/* Painel do chat */}
       <div className="flex flex-1 flex-col rounded-2xl border border-border bg-surface/40">
-        {/* Saldo — destaque premium no topo (número grande). */}
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <Link href="/creditos">
-            <Button size="sm" variant="ghost">
-              Comprar créditos
-            </Button>
-          </Link>
-          <div className="flex items-center gap-3 rounded-2xl border border-accent/30 bg-accent/10 px-4 py-2 shadow-[0_0_24px_-8px_var(--accent)]">
-            <Zap className="h-6 w-6 text-accent" />
-            <div className="leading-none">
-              <div className="text-2xl font-bold tracking-tight text-accent">
-                {balance.toLocaleString("pt-BR")}
-              </div>
-              <div className="mt-0.5 text-[11px] text-muted">
-                créditos disponíveis
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Mensagens */}
         <div className="flex-1 space-y-4 overflow-y-auto p-4">
           {messages.length === 0 && (
@@ -347,6 +383,7 @@ export function ChatUI({
             </p>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

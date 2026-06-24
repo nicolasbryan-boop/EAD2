@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Lock, Bot } from "lucide-react";
+import { Lock } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { ChatUI } from "@/components/ia/chat-ui";
@@ -51,28 +51,19 @@ export default async function IaPage({
       : Promise.resolve([]),
   ]);
 
+  // O robô inteiro + título + descrição + créditos ficam no hero do ChatUI.
   return (
-    <div>
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent text-white">
-          <Bot className="h-5 w-5" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold">{agent.name}</h1>
-          <p className="text-sm text-muted">{agent.description}</p>
-        </div>
-      </div>
-
-      <ChatUI
-        agentSlug={slug}
-        initialBalance={account?.credits ?? 0}
-        conversations={conversations.map((c) => ({ id: c.id, title: c.title }))}
-        activeConversationId={conversationId ?? null}
-        initialMessages={messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        }))}
-      />
-    </div>
+    <ChatUI
+      agentSlug={slug}
+      agentName={agent.name}
+      agentDescription={agent.description}
+      initialBalance={account?.credits ?? 0}
+      conversations={conversations.map((c) => ({ id: c.id, title: c.title }))}
+      activeConversationId={conversationId ?? null}
+      initialMessages={messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }))}
+    />
   );
 }
