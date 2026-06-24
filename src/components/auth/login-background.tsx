@@ -4,10 +4,12 @@ import { useEffect, useRef } from "react";
 
 /**
  * Fundo animado da tela de login: partículas azuis/ciano em canvas leve.
- * - Movimento lento e elegante; conexões bem sutis (só desktop).
- * - O mouse afasta de leve as partículas próximas + um glow radial segue o cursor.
- * - Respeita prefers-reduced-motion (desenha um único quadro estático).
- * - Mobile: menos partículas e sem linhas/glow.
+ * - Movimento CONTÍNUO e lento (velocidade real ~0.12–0.30 px/frame).
+ * - Conexões sutis recalculadas a cada frame (só desktop).
+ * - Mouse: afasta de leve as partículas próximas + glow radial que segue o
+ *   cursor com suavização (lerp).
+ * - Respeita prefers-reduced-motion (quadro estático).
+ * - Mobile: menos partículas, sem linhas/glow.
  * - pointer-events: none → nunca atrapalha cliques no card de login.
  */
 export function LoginBackground() {
@@ -26,12 +28,19 @@ export function LoginBackground() {
     const isMobile = window.matchMedia("(max-width: 640px)").matches;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
+    const LINK_DIST = 130; // distância máx. p/ desenhar linha
+    const MOUSE_RADIUS = 160; // raio de interação do cursor
+
     let w = 0;
     let h = 0;
     let raf = 0;
     type P = { x: number; y: number; vx: number; vy: number; r: number; a: number };
     let particles: P[] = [];
-    const mouse = { x: -9999, y: -9999 };
+
+    // Alvo do mouse + posição suavizada do glow.
+    const mouse = { x: -9999, y: -9999, active: false };
+    let glowX = -9999;
+    let glowY = -9999;
 
     function resize() {
       w = canvas!.clientWidth;
@@ -42,38 +51,56 @@ export function LoginBackground() {
     }
 
     function init() {
-      const count = isMobile ? 26 : Math.min(80, Math.floor((w * h) / 16000));
-      particles = Array.from({ length: count }, () => ({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.15,
-        vy: (Math.random() - 0.5) * 0.15,
-        r: Math.random() * 1.6 + 0.6,
-        a: Math.random() * 0.5 + 0.2,
-      }));
+      const count = isMobile ? 28 : Math.min(80, Math.floor((w * h) / 18000));
+      particles = Array.from({ length: count }, () => {
+        // Velocidade VISÍVEL mas lenta: 0.12–0.30 px/frame em direção aleatória.
+        const speed = 0.12 + Math.random() * 0.18;
+        const ang = Math.random() * Math.PI * 2;
+        return {
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: Math.cos(ang) * speed,
+          vy: Math.sin(ang) * speed,
+          r: Math.random() * 1.6 + 0.7,
+          a: Math.random() * 0.5 + 0.25,
+        };
+      });
     }
 
     function frame() {
       ctx!.clearRect(0, 0, w, h);
 
+      // Glow do cursor segue com suavização (lerp).
+      if (!isMobile && glowRef.current) {
+        if (mouse.active) {
+          glowX += (mouse.x - glowX) * 0.12;
+          glowY += (mouse.y - glowY) * 0.12;
+          glowRef.current.style.transform = `translate(${glowX - 250}px, ${
+            glowY - 250
+          }px)`;
+        }
+      }
+
       for (const p of particles) {
         p.x += p.vx;
         p.y += p.vy;
-        // Reentra pelo lado oposto (efeito infinito).
-        if (p.x < 0) p.x = w;
-        else if (p.x > w) p.x = 0;
-        if (p.y < 0) p.y = h;
-        else if (p.y > h) p.y = 0;
+        // Reentra suavemente pelo lado oposto.
+        if (p.x < -10) p.x = w + 10;
+        else if (p.x > w + 10) p.x = -10;
+        if (p.y < -10) p.y = h + 10;
+        else if (p.y > h + 10) p.y = -10;
 
         // Afastamento suave do cursor.
-        const dx = p.x - mouse.x;
-        const dy = p.y - mouse.y;
-        const d2 = dx * dx + dy * dy;
-        if (d2 < 14000) {
-          const d = Math.sqrt(d2) || 1;
-          const f = ((120 - d) / 120) * 0.5;
-          p.x += (dx / d) * f;
-          p.y += (dy / d) * f;
+        if (mouse.active) {
+          const dx = p.x - mouse.x;
+          const dy = p.y - mouse.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < MOUSE_RADIUS * MOUSE_RADIUS) {
+            const d = Math.sqrt(d2) || 1;
+            const f = ((MOUSE_RADIUS - d) / MOUSE_RADIUS) * 0.8;
+            p.x += (dx / d) * f;
+            p.y += (dy / d) * f;
+          }
         }
 
         ctx!.beginPath();
@@ -82,7 +109,7 @@ export function LoginBackground() {
         ctx!.fill();
       }
 
-      // Conexões sutis (apenas desktop).
+      // Conexões (apenas desktop), recalculadas a cada frame.
       if (!isMobile) {
         for (let i = 0; i < particles.length; i++) {
           for (let j = i + 1; j < particles.length; j++) {
@@ -91,10 +118,19 @@ export function LoginBackground() {
             const dx = a.x - b.x;
             const dy = a.y - b.y;
             const d2 = dx * dx + dy * dy;
-            if (d2 < 9000) {
-              const alpha = (1 - d2 / 9000) * 0.12;
+            if (d2 < LINK_DIST * LINK_DIST) {
+              const d = Math.sqrt(d2);
+              let alpha = (1 - d / LINK_DIST) * 0.16;
+              // Linhas perto do cursor brilham mais.
+              if (mouse.active) {
+                const mdx = (a.x + b.x) / 2 - mouse.x;
+                const mdy = (a.y + b.y) / 2 - mouse.y;
+                if (mdx * mdx + mdy * mdy < MOUSE_RADIUS * MOUSE_RADIUS) {
+                  alpha = Math.min(0.4, alpha * 2.4);
+                }
+              }
               ctx!.strokeStyle = `rgba(56, 189, 248, ${alpha})`;
-              ctx!.lineWidth = 0.5;
+              ctx!.lineWidth = 0.6;
               ctx!.beginPath();
               ctx!.moveTo(a.x, a.y);
               ctx!.lineTo(b.x, b.y);
@@ -107,17 +143,20 @@ export function LoginBackground() {
       raf = requestAnimationFrame(frame);
     }
 
+    function drawStatic() {
+      ctx!.clearRect(0, 0, w, h);
+      for (const p of particles) {
+        ctx!.beginPath();
+        ctx!.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx!.fillStyle = `rgba(56, 189, 248, ${p.a})`;
+        ctx!.fill();
+      }
+    }
+
     resize();
     init();
     if (reduced) {
-      // Um quadro estático, sem animação.
-      ctx.clearRect(0, 0, w, h);
-      for (const p of particles) {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(56, 189, 248, ${p.a})`;
-        ctx.fill();
-      }
+      drawStatic(); // acessibilidade: sem animação
     } else {
       frame();
     }
@@ -125,14 +164,16 @@ export function LoginBackground() {
     function onMove(e: MouseEvent) {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
-      if (glowRef.current && !isMobile) {
-        glowRef.current.style.transform = `translate(${e.clientX - 250}px, ${
-          e.clientY - 250
-        }px)`;
-        glowRef.current.style.opacity = "1";
+      if (!mouse.active) {
+        // primeira leitura: posiciona o glow sem "voar" da origem
+        glowX = e.clientX;
+        glowY = e.clientY;
       }
+      mouse.active = true;
+      if (glowRef.current && !isMobile) glowRef.current.style.opacity = "1";
     }
     function onLeave() {
+      mouse.active = false;
       mouse.x = -9999;
       mouse.y = -9999;
       if (glowRef.current) glowRef.current.style.opacity = "0";
@@ -165,13 +206,13 @@ export function LoginBackground() {
       <div className="absolute inset-0 bg-[radial-gradient(1200px_700px_at_70%_-10%,rgba(56,189,248,0.10),transparent_60%),radial-gradient(900px_600px_at_-10%_30%,rgba(124,92,255,0.10),transparent_55%)]" />
       {/* Camada 2 — partículas */}
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
-      {/* Camada 3 — glow radial que segue o mouse */}
+      {/* Camada 3 — glow radial que segue o mouse (suavizado) */}
       <div
         ref={glowRef}
         className="absolute left-0 top-0 h-[500px] w-[500px] rounded-full opacity-0 transition-opacity duration-500"
         style={{
           background:
-            "radial-gradient(circle, rgba(56,189,248,0.12), transparent 60%)",
+            "radial-gradient(circle, rgba(56,189,248,0.14), transparent 60%)",
           willChange: "transform",
         }}
       />
