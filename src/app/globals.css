@@ -61,70 +61,27 @@ body {
 
 /* ===========================================================================
    Mascotes-robô (cards de IA)
-   - EM REPOUSO: tudo parado (nenhuma animação infinita).
-   - A animação principal acontece SÓ no hover, e apenas em dispositivos que
-     realmente têm hover (desktop). No mobile/touch fica estável.
+   - EM REPOUSO: 100% parado (nenhuma animação, nenhum loop).
+   - No hover/focus (desktop), o robô só faz UM zoom lento e suave (sem loop).
+   - No mobile/touch nada dispara.
    =========================================================================== */
 .robot-glow {
   filter: drop-shadow(0 0 3px currentColor);
 }
-@keyframes robotFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
-@keyframes robotWave {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(-12deg); }
-}
-@keyframes robotShake {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(1.2px); }
-}
-@keyframes robotScan {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
-}
-@keyframes robotSpin {
-  to { transform: rotate(360deg); }
-}
-/* Repouso: só pontos de origem; sem animação. */
-.robot-float { transform-origin: center; }
-.robot-arm { transform-origin: 24px 80px; }
-.robot-ring { transform-origin: 60px 130px; }
 
-/* Container do robô: o ZOOM acontece aqui (só o robô cresce, não o card).
-   Transição lenta e suave para entrar e voltar. */
+/* Container do robô: a ÚNICA animação é o zoom suave (transição, não loop).
+   O scale fica só no robô — o card não cresce. */
 .robot-zoom {
   transform-origin: center bottom;
-  transition: transform 800ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 1100ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
 
-/* Hover/focus (apenas desktop com mouse): movimento LENTO e premium. */
+/* Hover/focus apenas em desktop com mouse. Um único movimento lento. */
 @media (hover: hover) and (pointer: fine) {
   .group:hover .robot-zoom,
   .group:focus-within .robot-zoom {
-    transform: scale(1.09);
-  }
-  .group:hover .robot-float,
-  .group:focus-within .robot-float {
-    animation: robotFloat 26s ease-in-out infinite;
-  }
-  .group:hover .robot-arm,
-  .group:focus-within .robot-arm {
-    animation: robotWave 12s ease-in-out infinite;
-  }
-  .group:hover .robot-shake,
-  .group:focus-within .robot-shake {
-    animation: robotShake 12s ease-in-out infinite;
-  }
-  .group:hover .robot-eye,
-  .group:focus-within .robot-eye {
-    animation: robotScan 12s ease-in-out infinite;
-  }
-  .group:hover .robot-ring,
-  .group:focus-within .robot-ring {
-    animation: robotSpin 60s linear infinite;
+    transform: scale(1.06) translateY(-3px);
   }
 }
 
