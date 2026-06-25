@@ -1,5 +1,6 @@
 import { LoginForm } from "@/components/auth/login-form";
 import { LoginBackground } from "@/components/auth/login-background";
+import { Logo } from "@/components/brand/logo";
 import { APP_NAME, EXTERNAL_CHECKOUT_URL } from "@/lib/constants";
 
 export const metadata = { title: `Entrar — ${APP_NAME}` };
@@ -12,7 +13,7 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-md">
         <div className="flex items-center gap-3 mb-8 justify-center">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-accent" />
+          <Logo size={44} />
           <span className="text-lg font-semibold tracking-tight">
             {APP_NAME}
           </span>

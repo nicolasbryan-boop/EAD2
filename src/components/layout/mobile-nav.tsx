@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Menu, X, Lock, Shield } from "lucide-react";
 import { APP_NAME, NAV_ITEMS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/brand/logo";
 import { LogoutButton } from "./logout-button";
 
 /**
@@ -21,7 +22,7 @@ export function MobileNav({ isAdmin = false }: { isAdmin?: boolean }) {
       {/* Topbar mobile */}
       <div className="md:hidden flex items-center justify-between h-14 px-4 border-b border-border bg-surface/80 backdrop-blur-md sticky top-0 z-30">
         <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-accent" />
+          <Logo size={28} />
           <span className="font-semibold text-sm">{APP_NAME}</span>
         </div>
         <button

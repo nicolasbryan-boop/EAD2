@@ -21,7 +21,18 @@
       "Bash(node --env-file=.env.local scripts/seed-user.mjs)",
       "Bash(node --env-file=.env.local -e \"const t=process.env.MP_ACCESS_TOKEN||''; console.log\\('MP_ACCESS_TOKEN definido?', t.length>0\\); console.log\\('prefixo:', t.slice\\(0,8\\)\\); console.log\\('parece de teste \\(TEST-\\)?', t.startsWith\\('TEST-'\\)\\);\")",
       "Bash(git check-ignore *)",
-      "Bash(node --env-file=.env.local scripts/seed-admin.mjs)"
+      "Bash(node --env-file=.env.local scripts/seed-admin.mjs)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://github.com/nicolasbryan-boop/EAD)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://github.com/nicolasbryan-boop)",
+      "Bash(claude mcp *)",
+      "mcp__stitch__get_screen",
+      "Bash(curl -sL \"https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sXzA4MjllMDQzNjhmMDQ3ZjFhMzYzODk1NGI0OGJlYjI3EgsSBxCS5__Z1hAYAZIBIwoKcHJvamVjdF9pZBIVQhM1NTE4MDQwMjIwNTkyNTc3MzQy&filename=&opi=89354086\" -o public/logo-trilogia.svg)",
+      "Bash(curl -sL \"https://lh3.googleusercontent.com/aida/AP1WRLtdXSCqCIRh5_j_NVXsohiauFKCCWDOlCezGD-j2D-MU4VH1lgtQV4Bp8Uo7opJr5Wxp7lA8tvoAMSEx5FReYzGf39V7DslTSU5qqEddZhjH-k9KM3Nlxe9LEFbs3goUuljez1ps_LsEx1eaP3QYhZZe-cVQ3WVOMV_edzElYxoEqG-e28RcqfkEkQTPTT5XiZjKgMwKT9GynCLVbOjg6tRBUvhlYkBGD-EFIkkRO9_7HzL06BWWDxUf5s\" -o public/logo-trilogia.png)",
+      "Bash(file public/logo-trilogia.svg)",
+      "mcp__stitch__list_screens",
+      "Bash(mv ia-analista.png ia-analista.jpg)",
+      "Bash(mv ia-estrategista.png ia-estrategista.jpg)",
+      "Bash(mv ia-executor.png ia-executor.jpg)"
     ],
     "additionalDirectories": [
       "c:\\Users\\nicol\\OneDrive\\Desktop\\painel ead\\src\\app\\aula\\[id]"

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Lock, Shield } from "lucide-react";
 import { APP_NAME, NAV_ITEMS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/brand/logo";
 import { LogoutButton } from "./logout-button";
 
 /** Menu lateral fixo — visível apenas no desktop (md+). */
@@ -14,7 +15,7 @@ export function Sidebar({ isAdmin = false }: { isAdmin?: boolean }) {
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 border-r border-border bg-surface/60 backdrop-blur-md">
       <div className="flex items-center gap-2 px-6 h-16 border-b border-border">
-        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-accent" />
+        <Logo size={32} />
         <span className="font-semibold tracking-tight">{APP_NAME}</span>
       </div>
 

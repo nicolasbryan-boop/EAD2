@@ -15,8 +15,8 @@ import {
   MessageSquare,
   Zap,
 } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Robot } from "@/components/ia/robot";
 import { AI_CREDIT_COST } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -170,13 +170,17 @@ export function ChatUI({
           }}
         />
         <div className="relative flex flex-col items-center gap-5 text-center sm:flex-row sm:items-center sm:text-left">
-          {/* Robô inteiro (mesmo componente da Início) */}
+          {/* Mascote 3D da IA 1 (mesmo asset da Início) */}
           <div className="robot-zoom shrink-0">
-            <Robot
-              variant={1}
-              accent="#34d399"
-              className="h-28 w-28 sm:h-36 sm:w-36"
-            />
+            <div className="relative h-28 w-28 overflow-hidden rounded-2xl ring-1 ring-[#34d399]/30 sm:h-36 sm:w-36">
+              <Image
+                src="/robots/ia-executor.jpg"
+                alt={agentName}
+                fill
+                sizes="144px"
+                className="object-cover"
+              />
+            </div>
           </div>
 
           {/* Texto + créditos */}

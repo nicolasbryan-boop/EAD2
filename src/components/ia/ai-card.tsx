@@ -2,13 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Lock, ArrowRight, Sparkles } from "lucide-react";
 import type { AiAgent } from "@/lib/constants";
-import { Robot } from "@/components/ia/robot";
 import { cn } from "@/lib/utils";
 
 const LOCKED_MESSAGE =
   "Essa IA ainda está em breve. Continue evoluindo na Trilogia do Sucesso para desbloquear novas inteligências.";
+
+/** Mascote 3D (Stitch) por agente. */
+const MASCOT: Record<string, string> = {
+  "ia-1": "/robots/ia-executor.jpg", // verde — liberada
+  "ia-2": "/robots/ia-analista.jpg", // ciano
+  "ia-3": "/robots/ia-estrategista.jpg", // roxo
+};
 
 /** Configuração visual por agente. IA 1 = verde; IA 2 e IA 3 = vermelho. */
 function styleFor(slug: string, active: boolean) {
@@ -63,13 +70,20 @@ export function AiCard({ agent }: { agent: AiAgent }) {
           style={{ background: s.overlay }}
         />
 
-        {/* lado esquerdo: robô grande (o ZOOM é só neste container, não no card) */}
+        {/* lado esquerdo: mascote 3D (o ZOOM é só neste container, não no card) */}
         <div className="robot-zoom relative flex w-2/5 items-center justify-center">
-          <Robot
-            variant={s.variant}
-            accent={s.accent}
-            className="h-36 w-full max-w-[120px]"
-          />
+          <div className="relative h-32 w-full max-w-[130px] overflow-hidden rounded-xl ring-1 ring-white/5">
+            <Image
+              src={MASCOT[agent.slug] ?? MASCOT["ia-1"]}
+              alt={agent.name}
+              fill
+              sizes="130px"
+              className={cn(
+                "object-cover transition-all duration-700",
+                !active && "grayscale-[0.35]"
+              )}
+            />
+          </div>
         </div>
 
         {/* lado direito: conteúdo */}
