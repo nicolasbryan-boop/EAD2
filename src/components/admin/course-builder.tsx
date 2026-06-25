@@ -12,6 +12,9 @@ import {
   Check,
   Loader2,
   CircleDot,
+  Copy,
+  Archive,
+  ArchiveRestore,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toVideoEmbed, LESSON_TYPES } from "@/lib/video";
@@ -23,6 +26,10 @@ import {
   adminCreateModule,
   adminCreateLesson,
   adminUpdateLesson,
+  adminDuplicateModule,
+  adminDuplicateLesson,
+  adminSetModuleArchived,
+  adminSetLessonArchived,
 } from "@/lib/actions/admin";
 import { cn } from "@/lib/utils";
 
@@ -32,8 +39,14 @@ export type BLesson = {
   videoEmbed: string;
   lessonType: string;
   isFree: boolean;
+  isArchived: boolean;
 };
-export type BModule = { id: string; title: string; lessons: BLesson[] };
+export type BModule = {
+  id: string;
+  title: string;
+  isArchived: boolean;
+  lessons: BLesson[];
+};
 
 export function CourseBuilder({
   courseId,
@@ -110,7 +123,8 @@ export function CourseBuilder({
           key={mod.id}
           className={cn(
             "rounded-2xl border bg-surface/60 p-4 transition-colors",
-            overModule === mod.id ? "border-primary/60" : "border-border"
+            overModule === mod.id ? "border-primary/60" : "border-border",
+            mod.isArchived && "opacity-60"
           )}
           onDragOver={(e) => {
             e.preventDefault();
@@ -193,6 +207,11 @@ function ModuleHeader({
         <h3 className="flex-1 text-base font-semibold">{module.title}</h3>
       )}
 
+      {module.isArchived && (
+        <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] text-muted">
+          arquivado
+        </span>
+      )}
       <button onClick={() => setEditing((v) => !v)} className="p-1.5 text-muted hover:text-foreground" title="Renomear">
         <Pencil className="h-4 w-4" />
       </button>
@@ -203,10 +222,26 @@ function ModuleHeader({
         <ChevronDown className="h-4 w-4" />
       </button>
       <button
+        onClick={() => start(async () => { await adminDuplicateModule(module.id); onRefresh(); })}
+        disabled={pending}
+        className="p-1.5 text-muted hover:text-foreground"
+        title="Duplicar módulo"
+      >
+        <Copy className="h-4 w-4" />
+      </button>
+      <button
+        onClick={() => start(async () => { await adminSetModuleArchived(module.id, !module.isArchived); onRefresh(); })}
+        disabled={pending}
+        className="p-1.5 text-muted hover:text-warning"
+        title={module.isArchived ? "Desarquivar" : "Arquivar"}
+      >
+        {module.isArchived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+      </button>
+      <button
         onClick={() => {
           if (
             confirm(
-              `Excluir o módulo "${module.title}"? As aulas dentro dele também serão excluídas.`
+              `Excluir o módulo "${module.title}"? As aulas dentro dele também serão excluídas. (Dica: prefira arquivar.)`
             )
           )
             start(async () => {
@@ -267,7 +302,14 @@ function LessonRow({
       <div className="flex items-center gap-2">
         <GripVertical className="h-4 w-4 cursor-move text-muted" />
         <CircleDot className="h-3.5 w-3.5 text-primary/70" />
-        <span className="flex-1 truncate text-sm">{title}</span>
+        <span className={cn("flex-1 truncate text-sm", lesson.isArchived && "opacity-60")}>
+          {title}
+        </span>
+        {lesson.isArchived && (
+          <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] text-muted">
+            arquivada
+          </span>
+        )}
         {lesson.isFree && (
           <span className="rounded-full bg-success/15 px-2 py-0.5 text-[10px] text-success">
             grátis
@@ -277,8 +319,24 @@ function LessonRow({
           <Pencil className="h-3.5 w-3.5" />
         </button>
         <button
+          onClick={() => start(async () => { await adminDuplicateLesson(lesson.id); onRefresh(); })}
+          disabled={pending}
+          className="p-1 text-muted hover:text-foreground"
+          title="Duplicar aula"
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={() => start(async () => { await adminSetLessonArchived(lesson.id, !lesson.isArchived); onRefresh(); })}
+          disabled={pending}
+          className="p-1 text-muted hover:text-warning"
+          title={lesson.isArchived ? "Desarquivar" : "Arquivar"}
+        >
+          {lesson.isArchived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+        </button>
+        <button
           onClick={() => {
-            if (confirm(`Excluir a aula "${lesson.title}"?`))
+            if (confirm(`Excluir a aula "${lesson.title}"? (Dica: prefira arquivar.)`))
               start(async () => {
                 await adminDeleteLesson(lesson.id);
                 onRefresh();

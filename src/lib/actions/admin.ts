@@ -302,6 +302,235 @@ export async function adminCreateLesson(input: {
   return { ok: true };
 }
 
+/* ============================================================================
+ * FASE 1 — Duplicar e arquivar
+ * Duplicar NUNCA copia matrículas, progresso ou comentários — só estrutura.
+ * ==========================================================================*/
+
+/** Duplica uma aula no mesmo módulo (como rascunho, prefixo "Cópia de"). */
+export async function adminDuplicateLesson(lessonId: string) {
+  let admin, actorId;
+  try {
+    ({ admin, userId: actorId } = await requireAdmin());
+  } catch {
+    return { ok: false, error: "Acesso negado." };
+  }
+  const { data: l } = await admin
+    .from("lessons")
+    .select("module_id, title, description, video_embed, lesson_type, is_free")
+    .eq("id", lessonId)
+    .maybeSingle();
+  if (!l) return { ok: false, error: "Aula não encontrada." };
+
+  const { count } = await admin
+    .from("lessons")
+    .select("id", { count: "exact", head: true })
+    .eq("module_id", l.module_id);
+
+  await admin.from("lessons").insert({
+    module_id: l.module_id,
+    title: `Cópia de ${l.title}`,
+    description: l.description,
+    video_embed: l.video_embed,
+    lesson_type: l.lesson_type,
+    is_free: l.is_free,
+    is_published: false, // rascunho
+    position: count ?? 0,
+  });
+  await logAudit(admin, actorId, "duplicate_lesson", { metadata: { lessonId } });
+  revalidatePath("/admin/conteudo");
+  return { ok: true };
+}
+
+/** Duplica um módulo com todas as suas aulas (como rascunho). */
+export async function adminDuplicateModule(moduleId: string) {
+  let admin, actorId;
+  try {
+    ({ admin, userId: actorId } = await requireAdmin());
+  } catch {
+    return { ok: false, error: "Acesso negado." };
+  }
+  const { data: m } = await admin
+    .from("course_modules")
+    .select("course_id, title, description")
+    .eq("id", moduleId)
+    .maybeSingle();
+  if (!m) return { ok: false, error: "Módulo não encontrado." };
+
+  const { count } = await admin
+    .from("course_modules")
+    .select("id", { count: "exact", head: true })
+    .eq("course_id", m.course_id);
+
+  const { data: newMod } = await admin
+    .from("course_modules")
+    .insert({
+      course_id: m.course_id,
+      title: `Cópia de ${m.title}`,
+      description: m.description,
+      position: count ?? 0,
+      is_published: false,
+    })
+    .select("id")
+    .single();
+  if (!newMod) return { ok: false, error: "Falha ao duplicar." };
+
+  const { data: lessons } = await admin
+    .from("lessons")
+    .select("title, description, video_embed, lesson_type, is_free, position")
+    .eq("module_id", moduleId)
+    .order("position", { ascending: true });
+
+  if (lessons && lessons.length > 0) {
+    await admin.from("lessons").insert(
+      lessons.map((l, i) => ({
+        module_id: newMod.id,
+        title: l.title,
+        description: l.description,
+        video_embed: l.video_embed,
+        lesson_type: l.lesson_type,
+        is_free: l.is_free,
+        is_published: false,
+        position: i,
+      }))
+    );
+  }
+  await logAudit(admin, actorId, "duplicate_module", { metadata: { moduleId } });
+  revalidatePath("/admin/conteudo");
+  return { ok: true };
+}
+
+/** Duplica um curso completo (módulos + aulas) como rascunho. */
+export async function adminDuplicateCourse(courseId: string) {
+  let admin, actorId;
+  try {
+    ({ admin, userId: actorId } = await requireAdmin());
+  } catch {
+    return { ok: false, error: "Acesso negado." };
+  }
+  const { data: c } = await admin
+    .from("courses")
+    .select("title, description, short_description, cover_image_url, price_cents")
+    .eq("id", courseId)
+    .maybeSingle();
+  if (!c) return { ok: false, error: "Curso não encontrado." };
+
+  const slug = `${slugify(c.title) || "curso"}-${Math.random().toString(36).slice(2, 6)}`;
+  const { count } = await admin
+    .from("courses")
+    .select("id", { count: "exact", head: true });
+
+  const { data: newCourse } = await admin
+    .from("courses")
+    .insert({
+      slug,
+      title: `Cópia de ${c.title}`,
+      description: c.description,
+      short_description: c.short_description,
+      cover_image_url: c.cover_image_url,
+      price_cents: c.price_cents,
+      status: "draft",
+      is_published: false,
+      is_featured: false,
+      position: (count ?? 0) + 1,
+    })
+    .select("id")
+    .single();
+  if (!newCourse) return { ok: false, error: "Falha ao duplicar." };
+
+  const { data: modules } = await admin
+    .from("course_modules")
+    .select("id, title, description, position")
+    .eq("course_id", courseId)
+    .order("position", { ascending: true });
+
+  for (const [mi, mod] of (modules ?? []).entries()) {
+    const { data: nm } = await admin
+      .from("course_modules")
+      .insert({
+        course_id: newCourse.id,
+        title: mod.title,
+        description: mod.description,
+        position: mi,
+        is_published: false,
+      })
+      .select("id")
+      .single();
+    if (!nm) continue;
+
+    const { data: lessons } = await admin
+      .from("lessons")
+      .select("title, description, video_embed, lesson_type, is_free, position")
+      .eq("module_id", mod.id)
+      .order("position", { ascending: true });
+    if (lessons && lessons.length > 0) {
+      await admin.from("lessons").insert(
+        lessons.map((l, i) => ({
+          module_id: nm.id,
+          title: l.title,
+          description: l.description,
+          video_embed: l.video_embed,
+          lesson_type: l.lesson_type,
+          is_free: l.is_free,
+          is_published: false,
+          position: i,
+        }))
+      );
+    }
+  }
+  await logAudit(admin, actorId, "duplicate_course", { courseId, metadata: { newCourseId: newCourse.id } });
+  revalidatePath("/admin/conteudo");
+  return { ok: true, slug };
+}
+
+/** Arquiva/desarquiva um curso (esconde do aluno; preserva matrículas). */
+export async function adminSetCourseArchived(courseId: string, archived: boolean) {
+  let admin, actorId;
+  try {
+    ({ admin, userId: actorId } = await requireAdmin());
+  } catch {
+    return { ok: false, error: "Acesso negado." };
+  }
+  await admin
+    .from("courses")
+    .update({
+      status: archived ? "archived" : "published",
+      is_published: !archived,
+    })
+    .eq("id", courseId);
+  await logAudit(admin, actorId, archived ? "archive_course" : "unarchive_course", { courseId });
+  revalidatePath("/admin/conteudo");
+  return { ok: true };
+}
+
+/** Arquiva/desarquiva um módulo. */
+export async function adminSetModuleArchived(moduleId: string, archived: boolean) {
+  let admin, actorId;
+  try {
+    ({ admin, userId: actorId } = await requireAdmin());
+  } catch {
+    return { ok: false, error: "Acesso negado." };
+  }
+  await admin.from("course_modules").update({ is_archived: archived }).eq("id", moduleId);
+  await logAudit(admin, actorId, archived ? "archive_module" : "unarchive_module", { metadata: { moduleId } });
+  revalidatePath("/admin/conteudo");
+  return { ok: true };
+}
+
+/** Arquiva/desarquiva uma aula. */
+export async function adminSetLessonArchived(lessonId: string, archived: boolean) {
+  let admin, actorId;
+  try {
+    ({ admin, userId: actorId } = await requireAdmin());
+  } catch {
+    return { ok: false, error: "Acesso negado." };
+  }
+  await admin.from("lessons").update({ is_archived: archived }).eq("id", lessonId);
+  await logAudit(admin, actorId, archived ? "archive_lesson" : "unarchive_lesson", { metadata: { lessonId } });
+  revalidatePath("/admin/conteudo");
+  return { ok: true };
+}
+
 /** Admin atualiza uma aula (título, embed, tipo, gratuita, publicação). */
 export async function adminUpdateLesson(input: {
   lessonId: string;

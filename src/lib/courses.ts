@@ -154,11 +154,13 @@ export async function getCourseDetail(slug: string): Promise<{
     .from("course_modules")
     .select("id, course_id, title, description, position")
     .eq("course_id", course.id)
+    .eq("is_archived", false) // arquivados não aparecem ao aluno
     .order("position", { ascending: true });
 
   const { data: lessons } = await supabase
     .from("lessons")
     .select("id, module_id, title, description, video_embed, position, is_locked")
+    .eq("is_archived", false)
     .order("position", { ascending: true });
 
   const { data: progress } = await supabase
@@ -221,11 +223,13 @@ export async function getCourseOverview(): Promise<{
     .from("course_modules")
     .select("id, course_id, title, description, position")
     .eq("course_id", course.id)
+    .eq("is_archived", false) // arquivados não aparecem ao aluno
     .order("position", { ascending: true });
 
   const { data: lessons } = await supabase
     .from("lessons")
     .select("id, module_id, title, description, video_embed, position, is_locked")
+    .eq("is_archived", false)
     .order("position", { ascending: true });
 
   const { data: progress } = await supabase
