@@ -124,6 +124,17 @@ export const AI_CREDIT_COST = {
   file: 40,
 } as const;
 
+/**
+ * WhatsApp do suporte (canal rápido — não substitui os chamados).
+ * Número no formato internacional só com dígitos (ex.: 55 + DDD + número).
+ * Configurável por env: NEXT_PUBLIC_SUPPORT_WHATSAPP_NUMBER.
+ */
+export const SUPPORT_WHATSAPP_NUMBER =
+  process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP_NUMBER ?? "5511999999999";
+
+export const SUPPORT_WHATSAPP_MESSAGE =
+  "Olá, preciso de ajuda na Trilogia do Sucesso.";
+
 export const SUPPORT_CATEGORIES = [
   { value: "duvida_aula", label: "Dúvida sobre aula" },
   { value: "acesso", label: "Problema de acesso" },

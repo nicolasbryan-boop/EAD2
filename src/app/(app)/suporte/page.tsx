@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { TicketForm } from "@/components/support/ticket-form";
+import { WhatsAppFab } from "@/components/support/whatsapp-fab";
 import { createClient } from "@/lib/supabase/server";
 import { TICKET_STATUS, categoryLabel } from "@/lib/constants";
 
@@ -19,6 +20,13 @@ export default async function SuportePage() {
     .from("support_tickets")
     .select("id, subject, category, status, created_at")
     .order("created_at", { ascending: false });
+
+  // Nome do aluno para personalizar a mensagem do WhatsApp.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .maybeSingle();
 
   return (
     <div className="space-y-8">
@@ -64,6 +72,9 @@ export default async function SuportePage() {
           )}
         </div>
       </div>
+
+      {/* Acesso rápido ao WhatsApp (não substitui o sistema de chamados) */}
+      <WhatsAppFab name={profile?.full_name} email={user.email} />
     </div>
   );
 }
