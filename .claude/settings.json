@@ -32,7 +32,8 @@
       "mcp__stitch__list_screens",
       "Bash(mv ia-analista.png ia-analista.jpg)",
       "Bash(mv ia-estrategista.png ia-estrategista.jpg)",
-      "Bash(mv ia-executor.png ia-executor.jpg)"
+      "Bash(mv ia-executor.png ia-executor.jpg)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://github.com/nicolasbryan-boop/EAD.git/info/refs?service=git-upload-pack)"
     ],
     "additionalDirectories": [
       "c:\\Users\\nicol\\OneDrive\\Desktop\\painel ead\\src\\app\\aula\\[id]"

@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import {
-  AddModuleForm,
-  AddLessonForm,
-  LessonEditor,
   CreateCourseForm,
   CourseSettingsForm,
 } from "@/components/admin/content-forms";
+import { CourseBuilder, type BModule } from "@/components/admin/course-builder";
 import { requireAdmin } from "@/lib/admin";
 import { formatBRL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -43,9 +41,24 @@ export default async function AdminConteudo({
   const { data: lessons } = selected
     ? await admin
         .from("lessons")
-        .select("id, module_id, title, video_embed, position")
+        .select("id, module_id, title, video_embed, lesson_type, is_free, position")
         .order("position", { ascending: true })
     : { data: [] };
+
+  // Monta a árvore para o construtor.
+  const tree: BModule[] = (modules ?? []).map((m) => ({
+    id: m.id,
+    title: m.title,
+    lessons: (lessons ?? [])
+      .filter((l) => l.module_id === m.id)
+      .map((l) => ({
+        id: l.id,
+        title: l.title,
+        videoEmbed: l.video_embed ?? "",
+        lessonType: l.lesson_type ?? "video",
+        isFree: l.is_free ?? false,
+      })),
+  }));
 
   return (
     <div className="space-y-6">
@@ -101,29 +114,11 @@ export default async function AdminConteudo({
             />
           </Card>
 
+          {/* Construtor de curso: arrastar, reordenar, mover entre módulos */}
           <Card>
-            <CardTitle>Adicionar módulo em “{selected.title}”</CardTitle>
-            <div className="mt-3">
-              <AddModuleForm courseId={selected.id} />
-            </div>
+            <CardTitle className="mb-3">Construtor — “{selected.title}”</CardTitle>
+            <CourseBuilder courseId={selected.id} initialModules={tree} />
           </Card>
-
-          {(modules ?? []).map((m) => (
-            <Card key={m.id} className="space-y-3">
-              <CardTitle>{m.title}</CardTitle>
-              {(lessons ?? [])
-                .filter((l) => l.module_id === m.id)
-                .map((l) => (
-                  <LessonEditor
-                    key={l.id}
-                    lessonId={l.id}
-                    title={l.title}
-                    embed={l.video_embed ?? ""}
-                  />
-                ))}
-              <AddLessonForm moduleId={m.id} />
-            </Card>
-          ))}
         </>
       )}
     </div>

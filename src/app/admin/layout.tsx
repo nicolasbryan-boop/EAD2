@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Shield, ArrowLeft } from "lucide-react";
+import { Shield, ArrowLeft, Eye } from "lucide-react";
 import { isCurrentUserAdmin } from "@/lib/admin";
 import { APP_NAME } from "@/lib/constants";
 import { AdminNav } from "@/components/admin/admin-nav";
+import { enterStudentPreview } from "@/lib/actions/preview";
 
 /**
  * Layout do painel admin. Fica FORA do grupo (app): tem navegação própria.
@@ -25,9 +26,17 @@ export default async function AdminLayout({
             <Shield className="h-5 w-5 text-primary" />
             <span className="font-semibold">{APP_NAME} · Admin</span>
           </div>
+          <form action={enterStudentPreview} className="ml-auto">
+            <button
+              type="submit"
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm text-muted hover:bg-surface-2 hover:text-foreground"
+            >
+              <Eye className="h-4 w-4" /> Ver como aluno
+            </button>
+          </form>
           <Link
             href="/inicio"
-            className="ml-auto flex items-center gap-1.5 text-sm text-muted hover:text-foreground"
+            className="flex items-center gap-1.5 text-sm text-muted hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" /> Voltar ao app
           </Link>

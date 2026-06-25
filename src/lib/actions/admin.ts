@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/admin";
+import { requireAdmin, logAudit } from "@/lib/admin";
 
 /** Admin responde um chamado (marca como 'answered'). */
 export async function adminReply(ticketId: string, body: string) {
@@ -47,13 +47,13 @@ export async function adminSetTicketStatus(ticketId: string, status: string) {
   return { ok: true };
 }
 
-/** Admin concede créditos a um aluno. */
+/** Admin concede créditos a um aluno (auditado). */
 export async function adminGrantCredits(userId: string, amount: number) {
   if (!Number.isFinite(amount) || amount <= 0)
     return { ok: false, error: "Quantidade inválida." };
-  let admin;
+  let admin, actorId;
   try {
-    ({ admin } = await requireAdmin());
+    ({ admin, userId: actorId } = await requireAdmin());
   } catch {
     return { ok: false, error: "Acesso negado." };
   }
@@ -63,19 +63,24 @@ export async function adminGrantCredits(userId: string, amount: number) {
     p_type: "grant",
     p_reason: "admin",
   });
+  await logAudit(admin, actorId, "grant_credits", {
+    targetUserId: userId,
+    metadata: { amount: Math.floor(amount) },
+  });
   revalidatePath("/admin/alunos");
   return { ok: true };
 }
 
-/** Admin ativa/expira a matrícula de um aluno no curso principal. */
+/** Admin ativa/expira a matrícula de um aluno num curso (auditado). */
 export async function adminSetEnrollment(
   userId: string,
   courseId: string,
-  active: boolean
+  active: boolean,
+  reason?: string
 ) {
-  let admin;
+  let admin, actorId;
   try {
-    ({ admin } = await requireAdmin());
+    ({ admin, userId: actorId } = await requireAdmin());
   } catch {
     return { ok: false, error: "Acesso negado." };
   }
@@ -87,7 +92,88 @@ export async function adminSetEnrollment(
     },
     { onConflict: "user_id,course_id" }
   );
+  await logAudit(admin, actorId, active ? "enroll_grant" : "enroll_revoke", {
+    targetUserId: userId,
+    courseId,
+    reason: reason ?? "liberação manual",
+  });
   revalidatePath("/admin/alunos");
+  return { ok: true };
+}
+
+/**
+ * Salva a ESTRUTURA do curso (ordem dos módulos, ordem das aulas e a qual
+ * módulo cada aula pertence) numa só operação. Preserva o progresso dos
+ * alunos — lesson_progress é vinculado ao lesson_id, que não muda ao
+ * reordenar ou mover a aula de módulo.
+ */
+export async function adminSaveCourseStructure(
+  courseId: string,
+  modules: { id: string; lessonIds: string[] }[]
+) {
+  let admin;
+  try {
+    ({ admin } = await requireAdmin());
+  } catch {
+    return { ok: false, error: "Acesso negado." };
+  }
+
+  for (let i = 0; i < modules.length; i++) {
+    const m = modules[i];
+    await admin
+      .from("course_modules")
+      .update({ position: i })
+      .eq("id", m.id)
+      .eq("course_id", courseId);
+    for (let j = 0; j < m.lessonIds.length; j++) {
+      await admin
+        .from("lessons")
+        .update({ position: j, module_id: m.id })
+        .eq("id", m.lessonIds[j]);
+    }
+  }
+
+  revalidatePath("/admin/conteudo");
+  return { ok: true };
+}
+
+/** Renomeia um módulo. */
+export async function adminRenameModule(moduleId: string, title: string) {
+  if (!title.trim()) return { ok: false, error: "Informe o título." };
+  let admin;
+  try {
+    ({ admin } = await requireAdmin());
+  } catch {
+    return { ok: false, error: "Acesso negado." };
+  }
+  await admin.from("course_modules").update({ title: title.trim() }).eq("id", moduleId);
+  revalidatePath("/admin/conteudo");
+  return { ok: true };
+}
+
+/** Exclui um módulo (e suas aulas, em cascata). UI confirma antes. */
+export async function adminDeleteModule(moduleId: string) {
+  let admin;
+  try {
+    ({ admin } = await requireAdmin());
+  } catch {
+    return { ok: false, error: "Acesso negado." };
+  }
+  await admin.from("course_modules").delete().eq("id", moduleId);
+  revalidatePath("/admin/conteudo");
+  return { ok: true };
+}
+
+/** Exclui uma aula. UI confirma antes. */
+export async function adminDeleteLesson(lessonId: string) {
+  let admin;
+  try {
+    ({ admin } = await requireAdmin());
+  } catch {
+    return { ok: false, error: "Acesso negado." };
+  }
+  await admin.from("lessons").delete().eq("id", lessonId);
+  revalidatePath("/admin/conteudo");
   return { ok: true };
 }
 
@@ -216,12 +302,15 @@ export async function adminCreateLesson(input: {
   return { ok: true };
 }
 
-/** Admin atualiza o embed/descrição de uma aula. */
+/** Admin atualiza uma aula (título, embed, tipo, gratuita, publicação). */
 export async function adminUpdateLesson(input: {
   lessonId: string;
   title?: string;
   description?: string;
   videoEmbed?: string;
+  lessonType?: string;
+  isFree?: boolean;
+  isPublished?: boolean;
 }) {
   let admin;
   try {
@@ -235,6 +324,9 @@ export async function adminUpdateLesson(input: {
     patch.description = input.description.trim() || null;
   if (input.videoEmbed !== undefined)
     patch.video_embed = input.videoEmbed.trim() || null;
+  if (input.lessonType !== undefined) patch.lesson_type = input.lessonType;
+  if (input.isFree !== undefined) patch.is_free = input.isFree;
+  if (input.isPublished !== undefined) patch.is_published = input.isPublished;
 
   await admin.from("lessons").update(patch).eq("id", input.lessonId);
   revalidatePath("/admin/conteudo");
