@@ -39,7 +39,9 @@ export default async function AdminConteudo({
   const { data: modules } = selected
     ? await admin
         .from("course_modules")
-        .select("id, title, is_archived, position")
+        .select(
+          "id, title, is_archived, position, release_type, release_at, release_after_days"
+        )
         .eq("course_id", selected.id)
         .order("position", { ascending: true })
     : { data: [] };
@@ -56,6 +58,9 @@ export default async function AdminConteudo({
     id: m.id,
     title: m.title,
     isArchived: m.is_archived ?? false,
+    releaseType: m.release_type ?? "immediate",
+    releaseAt: m.release_at ?? null,
+    releaseAfterDays: m.release_after_days ?? null,
     lessons: (lessons ?? [])
       .filter((l) => l.module_id === m.id)
       .map((l) => ({

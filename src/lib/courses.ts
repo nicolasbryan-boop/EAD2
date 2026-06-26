@@ -5,6 +5,11 @@ import type {
   Lesson,
   ModuleWithLessons,
 } from "@/lib/types";
+import {
+  isModuleLocked,
+  formatReleaseDate,
+  type ModuleRelease,
+} from "@/lib/release";
 
 export type StoreCourse = {
   id: string;
@@ -121,11 +126,20 @@ export async function getCourseDetail(slug: string): Promise<{
 
   const { data: enr } = await supabase
     .from("enrollments")
-    .select("status")
+    .select("status, created_at")
     .eq("user_id", user.id)
     .eq("course_id", course.id)
     .maybeSingle();
   const enrolled = enr?.status === "active";
+  const enrolledAt = enr?.created_at ? new Date(enr.created_at) : null;
+
+  // Admin nunca é bloqueado pela liberação programada.
+  const { data: prof } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  const isAdmin = prof?.role === "admin" || prof?.role === "super_admin";
 
   const storeCourse: StoreCourse = {
     id: course.id,
@@ -152,7 +166,9 @@ export async function getCourseDetail(slug: string): Promise<{
 
   const { data: modules } = await supabase
     .from("course_modules")
-    .select("id, course_id, title, description, position")
+    .select(
+      "id, course_id, title, description, position, release_type, release_at, release_after_days"
+    )
     .eq("course_id", course.id)
     .eq("is_archived", false) // arquivados não aparecem ao aluno
     .order("position", { ascending: true });
@@ -171,18 +187,31 @@ export async function getCourseDetail(slug: string): Promise<{
     (progress ?? []).filter((p) => p.completed).map((p) => p.lesson_id)
   );
 
-  const moduleList: ModuleWithLessons[] = (modules ?? []).map(
-    (m: CourseModule) => ({
+  const moduleList: ModuleWithLessons[] = (
+    (modules ?? []) as (CourseModule & ModuleRelease)[]
+  ).map((m) => {
+    const { locked, releaseAt } = isModuleLocked(m, enrolledAt, isAdmin);
+    return {
       ...m,
+      locked,
+      releaseLabel:
+        locked && releaseAt
+          ? `Esse módulo será liberado em ${formatReleaseDate(releaseAt)}`
+          : null,
       lessons: ((lessons ?? []) as Lesson[])
         .filter((l) => l.module_id === m.id)
         .map((l) => ({ ...l, completed: completedSet.has(l.id) })),
-    })
-  );
+    };
+  });
 
+  // "Continuar" e contagem ignoram módulos bloqueados.
+  const visibleLessons = moduleList
+    .filter((m) => !m.locked)
+    .flatMap((m) => m.lessons);
   const allLessons = moduleList.flatMap((m) => m.lessons);
   const completedLessons = allLessons.filter((l) => l.completed).length;
-  const nextLesson = allLessons.find((l) => !l.completed) ?? allLessons[0] ?? null;
+  const nextLesson =
+    visibleLessons.find((l) => !l.completed) ?? visibleLessons[0] ?? null;
 
   return {
     course: storeCourse,
@@ -277,14 +306,38 @@ export async function getLessonContext(lessonId: string) {
 
   if (!lesson) return null;
 
-  // Descobre o curso a partir do módulo.
+  // Descobre o curso a partir do módulo (+ regra de liberação).
   const { data: mod } = await supabase
     .from("course_modules")
-    .select("id, course_id")
+    .select(
+      "id, course_id, release_type, release_at, release_after_days"
+    )
     .eq("id", lesson.module_id)
     .single();
 
   if (!mod) return null;
+
+  // Gate de liberação programada (admin nunca bloqueado).
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: enr } = user
+    ? await supabase
+        .from("enrollments")
+        .select("created_at")
+        .eq("user_id", user.id)
+        .eq("course_id", mod.course_id)
+        .maybeSingle()
+    : { data: null };
+  const { data: prof } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
+    : { data: null };
+  const isAdmin = prof?.role === "admin" || prof?.role === "super_admin";
+  const { locked: moduleLocked, releaseAt } = isModuleLocked(
+    mod,
+    enr?.created_at ? new Date(enr.created_at) : null,
+    isAdmin
+  );
 
   // Todas as aulas do curso, em ordem (módulo, depois aula).
   const { data: modules } = await supabase
@@ -329,5 +382,10 @@ export async function getLessonContext(lessonId: string) {
     prev: index > 0 ? ordered[index - 1] : null,
     next: index < ordered.length - 1 ? ordered[index + 1] : null,
     completed: progress?.completed ?? false,
+    moduleLocked,
+    releaseLabel:
+      moduleLocked && releaseAt
+        ? `Esse módulo será liberado em ${formatReleaseDate(releaseAt)}`
+        : null,
   };
 }

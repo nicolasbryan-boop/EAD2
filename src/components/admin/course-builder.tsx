@@ -15,6 +15,7 @@ import {
   Copy,
   Archive,
   ArchiveRestore,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toVideoEmbed, LESSON_TYPES } from "@/lib/video";
@@ -30,6 +31,7 @@ import {
   adminDuplicateLesson,
   adminSetModuleArchived,
   adminSetLessonArchived,
+  adminSetModuleRelease,
 } from "@/lib/actions/admin";
 import { cn } from "@/lib/utils";
 
@@ -45,6 +47,9 @@ export type BModule = {
   id: string;
   title: string;
   isArchived: boolean;
+  releaseType: string;
+  releaseAt: string | null;
+  releaseAfterDays: number | null;
   lessons: BLesson[];
 };
 
@@ -140,6 +145,8 @@ export function CourseBuilder({
             onDown={() => moveModule(mi, 1)}
             onRefresh={() => router.refresh()}
           />
+
+          <ReleaseControl module={mod} onRefresh={() => router.refresh()} />
 
           <div className="mt-3 space-y-2">
             {mod.lessons.length === 0 && (
@@ -403,6 +410,97 @@ function LessonRow({
           >
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             Salvar aula
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* --------------------- Liberação programada --------------------- */
+function ReleaseControl({
+  module,
+  onRefresh,
+}: {
+  module: BModule;
+  onRefresh: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [type, setType] = useState(module.releaseType || "immediate");
+  // datetime-local quer "YYYY-MM-DDTHH:mm"
+  const [at, setAt] = useState(
+    module.releaseAt ? module.releaseAt.slice(0, 16) : ""
+  );
+  const [days, setDays] = useState(
+    module.releaseAfterDays != null ? String(module.releaseAfterDays) : ""
+  );
+  const [pending, start] = useTransition();
+
+  const summary =
+    module.releaseType === "scheduled_date"
+      ? "data agendada"
+      : module.releaseType === "days_after_enrollment"
+      ? `${module.releaseAfterDays ?? 0} dias após matrícula`
+      : "imediata";
+
+  return (
+    <div className="mt-2 rounded-xl border border-dashed border-border px-3 py-2 text-xs">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 text-muted hover:text-foreground"
+      >
+        <Clock className="h-3.5 w-3.5" />
+        Liberação: <span className="font-medium text-foreground">{summary}</span>
+      </button>
+
+      {open && (
+        <div className="mt-3 space-y-2">
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="w-full rounded-lg border border-border bg-surface-2 px-2 h-9 text-sm outline-none"
+          >
+            <option value="immediate">Imediata</option>
+            <option value="scheduled_date">Em uma data</option>
+            <option value="days_after_enrollment">X dias após a matrícula</option>
+          </select>
+
+          {type === "scheduled_date" && (
+            <input
+              type="datetime-local"
+              value={at}
+              onChange={(e) => setAt(e.target.value)}
+              className="w-full rounded-lg border border-border bg-surface-2 px-2 h-9 text-sm outline-none"
+            />
+          )}
+          {type === "days_after_enrollment" && (
+            <input
+              type="number"
+              min={0}
+              value={days}
+              onChange={(e) => setDays(e.target.value)}
+              placeholder="Dias após a matrícula"
+              className="w-full rounded-lg border border-border bg-surface-2 px-2 h-9 text-sm outline-none"
+            />
+          )}
+
+          <Button
+            size="sm"
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                await adminSetModuleRelease(module.id, {
+                  type,
+                  at: at ? new Date(at).toISOString() : null,
+                  days: days ? parseInt(days, 10) : null,
+                });
+                setOpen(false);
+                onRefresh();
+              })
+            }
+          >
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            Salvar liberação
           </Button>
         </div>
       )}

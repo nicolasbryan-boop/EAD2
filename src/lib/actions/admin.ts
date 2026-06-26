@@ -137,6 +137,34 @@ export async function adminSaveCourseStructure(
   return { ok: true };
 }
 
+/** Define a regra de liberação programada de um módulo (auditado). */
+export async function adminSetModuleRelease(
+  moduleId: string,
+  input: { type: string; at?: string | null; days?: number | null }
+) {
+  let admin, actorId;
+  try {
+    ({ admin, userId: actorId } = await requireAdmin());
+  } catch {
+    return { ok: false, error: "Acesso negado." };
+  }
+  const patch = {
+    release_type: input.type,
+    release_at:
+      input.type === "scheduled_date" && input.at ? input.at : null,
+    release_after_days:
+      input.type === "days_after_enrollment" && input.days != null
+        ? Math.max(0, Math.floor(input.days))
+        : null,
+  };
+  await admin.from("course_modules").update(patch).eq("id", moduleId);
+  await logAudit(admin, actorId, "set_module_release", {
+    metadata: { moduleId, ...patch },
+  });
+  revalidatePath("/admin/conteudo");
+  return { ok: true };
+}
+
 /** Renomeia um módulo. */
 export async function adminRenameModule(moduleId: string, title: string) {
   if (!title.trim()) return { ok: false, error: "Informe o título." };

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Lock } from "lucide-react";
 import { FocusHeader } from "@/components/lessons/focus-header";
 import { VideoEmbed } from "@/components/lessons/video-embed";
 import { CompleteButton } from "@/components/lessons/complete-button";
@@ -18,6 +18,27 @@ export default async function AulaPage({
 
   // RLS bloqueou (sem matrícula) ou aula inexistente.
   if (!ctx) notFound();
+
+  // Módulo com liberação programada ainda não liberada → tela de bloqueio.
+  if (ctx.moduleLocked) {
+    return (
+      <div className="min-h-screen">
+        <FocusHeader progressPct={0} />
+        <main className="mx-auto flex max-w-md flex-col items-center px-4 py-20 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-warning/15 text-warning">
+            <Lock className="h-7 w-7" />
+          </div>
+          <h1 className="mt-4 text-xl font-semibold">Módulo ainda bloqueado</h1>
+          <p className="mt-2 text-sm text-muted">
+            {ctx.releaseLabel ?? "Esse módulo ainda não foi liberado."}
+          </p>
+          <Link href="/cursos" className="mt-6">
+            <Button>Voltar para cursos</Button>
+          </Link>
+        </main>
+      </div>
+    );
+  }
 
   const { lesson, index, total, prev, next, completed } = ctx;
 

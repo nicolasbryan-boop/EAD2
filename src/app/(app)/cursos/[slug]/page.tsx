@@ -132,26 +132,37 @@ export default async function CursoDetailPage({
           <div className="space-y-6">
             {modules.map((mod) => (
               <div key={mod.id}>
-                <h2 className="mb-3 text-lg font-semibold">{mod.title}</h2>
-                <div className="space-y-2">
-                  {mod.lessons.map((lesson) => (
-                    <Link key={lesson.id} href={`/aula/${lesson.id}`}>
-                      <div
-                        className={cn(
-                          "flex items-center gap-3 rounded-xl border border-border bg-surface/60 px-4 py-3 transition-colors hover:bg-surface-2",
-                          lesson.id === nextLesson?.id && "ring-1 ring-primary/60"
-                        )}
-                      >
-                        {lesson.completed ? (
-                          <CheckCircle2 className="h-5 w-5 text-success" />
-                        ) : (
-                          <Circle className="h-5 w-5 text-muted" />
-                        )}
-                        <span className="flex-1 text-sm">{lesson.title}</span>
-                      </div>
-                    </Link>
-                  ))}
+                <div className="mb-3 flex items-center gap-2">
+                  <h2 className="text-lg font-semibold">{mod.title}</h2>
+                  {mod.locked && <Lock className="h-4 w-4 text-warning" />}
                 </div>
+
+                {mod.locked ? (
+                  <div className="flex items-center gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+                    <Lock className="h-4 w-4 shrink-0" />
+                    <span>{mod.releaseLabel}</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {mod.lessons.map((lesson) => (
+                      <Link key={lesson.id} href={`/aula/${lesson.id}`}>
+                        <div
+                          className={cn(
+                            "flex items-center gap-3 rounded-xl border border-border bg-surface/60 px-4 py-3 transition-colors hover:bg-surface-2",
+                            lesson.id === nextLesson?.id && "ring-1 ring-primary/60"
+                          )}
+                        >
+                          {lesson.completed ? (
+                            <CheckCircle2 className="h-5 w-5 text-success" />
+                          ) : (
+                            <Circle className="h-5 w-5 text-muted" />
+                          )}
+                          <span className="flex-1 text-sm">{lesson.title}</span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

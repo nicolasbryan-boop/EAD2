@@ -36,4 +36,8 @@ export type LessonView = Lesson & {
 
 export type ModuleWithLessons = CourseModule & {
   lessons: LessonView[];
+  /** Bloqueado por liberação programada (Fase 2). */
+  locked?: boolean;
+  /** Texto "será liberado em ..." quando bloqueado. */
+  releaseLabel?: string | null;
 };
